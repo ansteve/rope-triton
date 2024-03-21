@@ -18,22 +18,23 @@ def _apply_rope_kernel(
 
     t = tl.load(T + pid * BLOCK_SIZE + idx)
 
-    freq = tl.load(FREQS + seq_idx * FREQS_DIM + idx)
+    freqs = tl.load(FREQS + seq_idx * FREQS_DIM + idx)
+    freqs = tl.where(idx < FREQS_DIM, freqs, 0.0)
 
     # Apply RoPE
-    cos_ = tl.cos(freq)
-    sin_ = tl.sin(freq)
+    cos_ = tl.cos(freqs)
+    sin_ = tl.sin(freqs)
     t_cos = t * cos_
-    # t_sin = t * sin_
 
     # Rotate half logic
-    half_dim = BLOCK_SIZE // 2
+    half_dim = FREQS_DIM // 2
     new_idx = tl.where(idx >= half_dim, idx - half_dim, idx + half_dim)
     half_t = tl.load(T + pid * BLOCK_SIZE + new_idx)
     rotated_t = tl.where(new_idx >= half_dim, -half_t, half_t)
-    
+
+    res = tl.where(idx < FREQS_DIM, t_cos + rotated_t * sin_, t)
     # Write back to output
-    tl.store(OUT + pid * BLOCK_SIZE + idx, t_cos + rotated_t * sin_)
+    tl.store(OUT + pid * BLOCK_SIZE + idx, res)
 
 def apply_rotary_pos_emb_triton(
     t: torch.Tensor, 
@@ -56,7 +57,7 @@ def apply_rotary_pos_emb_triton(
     # Launch kernel with 1D grid
     _apply_rope_kernel[grid](
         t, freqs, out, 
-        seq_len, b * h, freqs.shape[1],
+        seq_len, b * h, freqs.shape[-1],
         BLOCK_SIZE=BLOCK_SIZE
     )
     return out.view(seq_len, b, h, d)

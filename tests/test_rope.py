@@ -27,10 +27,10 @@ def _non_overlapping_grad(output: torch.Tensor) -> torch.Tensor:
 
 
 @pytest.mark.parametrize("dtype", [torch.float32, torch.float16])
-#@pytest.mark.parametrize("seq_length", [2048, 4096])
-#@pytest.mark.parametrize("hidden_size", [128, 256])
-@pytest.mark.parametrize("seq_length", [4, 4])
-@pytest.mark.parametrize("hidden_size", [2, 2])
+@pytest.mark.parametrize("seq_length", [2048, 4096])
+@pytest.mark.parametrize("hidden_size", [128, 256])
+#@pytest.mark.parametrize("seq_length", [4, 8])
+#@pytest.mark.parametrize("hidden_size", [4, 4])
 @pytest.mark.parametrize("rotary_percent", [0.5, 1.0])
 @pytest.mark.parametrize("margin", [0])
 #@pytest.mark.parametrize("transpose", [None, (0, 1), (2, 3)])
@@ -64,28 +64,28 @@ def test_fused_rope(
     emb = rotary_pos_emb(seq_length)
 
     # unfused
-    output_unfused = apply_rotary_pos_emb_triton(
+    output_triton = apply_rotary_pos_emb_triton(
         t, emb
     )
-    print('output_unfused', output_unfused)
-    loss_unfused = loss_func(output_unfused)
+    # print('output_triton', output_triton)
+    loss_unfused = loss_func(output_triton)
     #loss_unfused.backward()
     #grad_unfused = t.grad.detach().clone()
     #t.grad = None
 
     # fused
-    output_fused = apply_rotary_pos_emb(
+    output_torch = apply_rotary_pos_emb(
         t,
         emb,
         tensor_format=tensor_format,
         fused=False,
     )
-    print('output_fused', output_fused)
-    loss_fused = loss_func(output_fused)
+    # print('output_torch', output_torch)
+    loss_fused = loss_func(output_torch)
     #loss_fused.backward()
     #grad_fused = t.grad.detach().clone()
     #t.grad = None
 
-    torch.testing.assert_close(output_fused, output_unfused, **get_tol(dtype))
+    torch.testing.assert_close(output_torch, output_triton, **get_tol(dtype))
     #torch.testing.assert_close(grad_fused, grad_unfused, **get_tol(dtype))
-    assert output_fused.is_contiguous()
+    assert output_triton.is_contiguous()
