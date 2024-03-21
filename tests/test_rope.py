@@ -68,6 +68,7 @@ def test_fused_rope(
     loss_triton = loss_func(output_triton)
     loss_triton.backward()
     grad_triton = t.grad.detach().clone()
+    print(grad_triton)
     t.grad = None
 
     # pytorch
@@ -81,8 +82,9 @@ def test_fused_rope(
     loss_torch = loss_func(output_torch)
     loss_torch.backward()
     grad_torch = t.grad.detach().clone()
+    print(grad_torch)
     t.grad = None
 
     torch.testing.assert_close(output_triton, output_torch, **get_tol(dtype))
-    #torch.testing.assert_close(grad_triton, grad_torch, **get_tol(dtype))
+    torch.testing.assert_close(grad_triton, grad_torch, **get_tol(dtype))
     assert output_triton.is_contiguous()
