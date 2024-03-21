@@ -1,3 +1,4 @@
+pytest
 torch
 triton
 git+https://github.com/NVIDIA/TransformerEngine.git@stable

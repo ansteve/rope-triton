@@ -29,11 +29,8 @@ def _non_overlapping_grad(output: torch.Tensor) -> torch.Tensor:
 @pytest.mark.parametrize("dtype", [torch.float32, torch.float16])
 @pytest.mark.parametrize("seq_length", [2048, 4096])
 @pytest.mark.parametrize("hidden_size", [128, 256])
-#@pytest.mark.parametrize("seq_length", [4, 8])
-#@pytest.mark.parametrize("hidden_size", [4, 4])
 @pytest.mark.parametrize("rotary_percent", [0.5, 1.0])
 @pytest.mark.parametrize("margin", [0])
-#@pytest.mark.parametrize("transpose", [None, (0, 1), (2, 3)])
 @pytest.mark.parametrize("transpose", [None])
 @pytest.mark.parametrize("tensor_format", ["sbhd"])
 @pytest.mark.parametrize("loss_func", [_overlapping_grad, _non_overlapping_grad])
@@ -63,17 +60,17 @@ def test_fused_rope(
     rotary_pos_emb = RotaryPositionEmbedding(hidden_size, rotary_percent)
     emb = rotary_pos_emb(seq_length)
 
-    # unfused
+    # triton
     output_triton = apply_rotary_pos_emb_triton(
         t, emb
     )
     # print('output_triton', output_triton)
-    loss_unfused = loss_func(output_triton)
-    #loss_unfused.backward()
-    #grad_unfused = t.grad.detach().clone()
-    #t.grad = None
+    loss_triton = loss_func(output_triton)
+    loss_triton.backward()
+    grad_triton = t.grad.detach().clone()
+    t.grad = None
 
-    # fused
+    # pytorch
     output_torch = apply_rotary_pos_emb(
         t,
         emb,
@@ -81,11 +78,11 @@ def test_fused_rope(
         fused=False,
     )
     # print('output_torch', output_torch)
-    loss_fused = loss_func(output_torch)
-    #loss_fused.backward()
-    #grad_fused = t.grad.detach().clone()
-    #t.grad = None
+    loss_torch = loss_func(output_torch)
+    loss_torch.backward()
+    grad_torch = t.grad.detach().clone()
+    t.grad = None
 
-    torch.testing.assert_close(output_torch, output_triton, **get_tol(dtype))
-    #torch.testing.assert_close(grad_fused, grad_unfused, **get_tol(dtype))
+    torch.testing.assert_close(output_triton, output_torch, **get_tol(dtype))
+    #torch.testing.assert_close(grad_triton, grad_torch, **get_tol(dtype))
     assert output_triton.is_contiguous()
