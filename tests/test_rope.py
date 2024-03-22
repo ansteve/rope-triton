@@ -28,7 +28,7 @@ def _non_overlapping_grad(output: torch.Tensor) -> torch.Tensor:
 
 @pytest.mark.parametrize("dtype", [torch.float32, torch.float16])
 @pytest.mark.parametrize("seq_length", [2048, 4096])
-@pytest.mark.parametrize("hidden_size", [128, 256])
+@pytest.mark.parametrize("hidden_size", [32, 64, 128, 256, 512])
 @pytest.mark.parametrize("rotary_percent", [0.5, 1.0])
 @pytest.mark.parametrize("margin", [0])
 @pytest.mark.parametrize("transpose", [None])
@@ -64,11 +64,9 @@ def test_fused_rope(
     output_triton = apply_rotary_pos_emb_triton(
         t, emb
     )
-    # print('output_triton', output_triton)
     loss_triton = loss_func(output_triton)
     loss_triton.backward()
     grad_triton = t.grad.detach().clone()
-    print(grad_triton)
     t.grad = None
 
     # pytorch
@@ -78,11 +76,9 @@ def test_fused_rope(
         tensor_format=tensor_format,
         fused=False,
     )
-    # print('output_torch', output_torch)
     loss_torch = loss_func(output_torch)
     loss_torch.backward()
     grad_torch = t.grad.detach().clone()
-    print(grad_torch)
     t.grad = None
 
     torch.testing.assert_close(output_triton, output_torch, **get_tol(dtype))

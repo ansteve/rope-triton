@@ -13,9 +13,9 @@ from src.rope_triton import apply_rotary_pos_emb_triton
         x_vals=[2**i for i in range(8, 12, 1)],  # Different possible values for `x_name`.
         x_log=True,  # x axis is logarithmic.
         line_arg='provider',  # Argument name whose value corresponds to a different line in the plot.
-        line_vals=['triton', 'cuda'],  # Possible values for `line_arg`.
-        line_names=['Triton', 'Cuda'],  # Label name for the lines.
-        styles=[('blue', '-'), ('green', '-')],  # Line styles.
+        line_vals=['torch', 'triton', 'cuda'],  # Possible values for `line_arg`.
+        line_names=['Torch', 'Triton', 'Cuda'],  # Label name for the lines.
+        styles=[('red', '-'), ('blue', '-'), ('green', '-')],  # Line styles.
         ylabel='ms',  # Label name for the y-axis.
         plot_name='rope-performance',  # Name for the plot. Used also as a file name for saving the plot.
         args={},  # Values for function arguments not in `x_names` and `y_name`.
@@ -33,6 +33,10 @@ def benchmark(seq_length, provider):
     emb = rotary_pos_emb(seq_length)
 
     quantiles = [0.5, 0.2, 0.8]
+    if provider == 'torch':
+        ms, min_ms, max_ms =  triton.testing.do_bench(
+            lambda: apply_rotary_pos_emb(t, emb),
+            quantiles=quantiles)
     if provider == 'cuda':
         ms, min_ms, max_ms =  triton.testing.do_bench(
             lambda: apply_rotary_pos_emb(t, emb, fused=True),

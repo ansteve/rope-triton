@@ -23,7 +23,13 @@ PYTHONPATH=. pytest tests/test_rope.py
 
 ## 성능비교
 
+CUDA 버젼과 Triton 버젼의 성능 비교를 하기 위해서 아래 스크립트 실행합니다.
 
+```
+PYTHONPATH=. python3 benchmarks/benchmark_rope.py
+```
+
+![이미지1](./result/rope-performance.png)
 
 
 ## 참고
