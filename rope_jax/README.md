@@ -1,6 +1,6 @@
 # rope-triton
 
-RoPE(Rotary Position Embedding)을 Triton으로 작성한 프로젝트입니다.
+RoPE(Rotary Position Embedding)을 Jax으로 작성한 프로젝트입니다.
 
 
 ## 성능비교
