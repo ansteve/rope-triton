@@ -51,8 +51,9 @@ def benchmark(seq_length, provider):
         print(xq.shape)
         rotray_emb = RotaryEmbedding(dim = dim_per_head)(seq_length)
         print(rotray_emb.shape)
+        apply_rotary_emb_jit = jax.jit(apply_rotary_emb)
         ms, min_ms, max_ms =  triton.testing.do_bench(
-            lambda: apply_rotary_emb(xq, rotray_emb),
+            lambda: apply_rotary_emb_jit(xq, rotray_emb).block_until_ready(),
             quantiles=quantiles)
     if provider == 'triton':
         ms, min_ms, max_ms = triton.testing.do_bench(
